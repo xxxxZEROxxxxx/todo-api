@@ -1,25 +1,40 @@
 import { Injectable } from '@nestjs/common';
-import { Todo } from './todos.module';
-
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { Todo } from './todo.entity';
 
 @Injectable()
 export class TodosService {
-  private todos: Todo[] = [];
+  constructor(
+    @InjectRepository(Todo)
+    private readonly todoRepository: Repository<Todo>,
+  ) {}
 
-  findAll(): Todo[] {
-    return this.todos;
+  // جلب جميع المهام
+  async findAll(): Promise<Todo[]> {
+    return this.todoRepository.find();
   }
 
-  create(todo: Todo): Todo {
-    todo.id = Date.now();
-    this.todos.push(todo);
-    return todo;
+  // إنشاء مهمة جديدة
+  async create(todoData: Partial<Todo>): Promise<Todo> {
+    const todo = this.todoRepository.create(todoData);
+    return this.todoRepository.save(todo);
   }
 
-  delete(id: number): boolean {
-    const index = this.todos.findIndex(t => t.id === id);
-    if (index === -1) return false;
-    this.todos.splice(index, 1);
-    return true;
+  // حذف مهمة حسب ID
+  async delete(id: number): Promise<boolean> {
+    const result = await this.todoRepository.delete(id);
+    return (result.affected ?? 0) > 0;
+  }
+
+  // تعديل مهمة حسب ID
+  async update(id: number, updatedTodo: Partial<Todo>): Promise<Todo | null> {
+    await this.todoRepository.update(id, updatedTodo);
+    return this.todoRepository.findOneBy({ id });
+  }
+
+  // جلب مهمة واحدة حسب ID
+  async findById(id: number): Promise<Todo | null> {
+    return this.todoRepository.findOneBy({ id });
   }
 }
